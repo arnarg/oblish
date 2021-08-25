@@ -66,6 +66,21 @@ func run(c *cli.Context) error {
 		return nil
 	})
 
+	for _, path := range conf.Copy {
+		src, err := filepath.Abs(path.Base + "/" + path.Relative)
+		if err != nil {
+			return err
+		}
+		dst, err := filepath.Abs(destinationPath + "/" + path.Relative)
+		if err != nil {
+			return err
+		}
+		err = util.RecursiveCopy(src, dst)
+		if err != nil {
+			return err
+		}
+	}
+
 	noteManager.ComputeLinks()
 
 	err = noteManager.RenderNotes(destinationPath, conf.NoteTemplate, conf.Vars)

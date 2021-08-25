@@ -1,7 +1,9 @@
 package util
 
 import (
+	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -49,4 +51,26 @@ func CopyFile(src, dst string) error {
 
 	_, err = io.Copy(dstFile, srcFile)
 	return err
+}
+
+func RecursiveCopy(src, dst string) error {
+	fi, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+	if !fi.IsDir() {
+		return CopyFile(src, dst)
+	}
+
+	filepath.WalkDir(src, func(p string, d fs.DirEntry, err error) error {
+		if !d.IsDir() {
+			relativePath := strings.TrimPrefix(p, src)
+			err := CopyFile(p, dst+"/"+relativePath)
+			if err != nil {
+				fmt.Println(err)
+			}
+		}
+		return nil
+	})
+	return nil
 }
