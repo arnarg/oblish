@@ -27,6 +27,10 @@ func run(c *cli.Context) error {
 	if !fi.IsDir() {
 		return fmt.Errorf("%s is not a directory", vaultDir)
 	}
+	vaultDir, err = filepath.Abs(vaultDir)
+	if err != nil {
+		return err
+	}
 
 	conf, err := config.Load(config.ComputePath(vaultDir, configPath))
 	if err != nil {
