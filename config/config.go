@@ -10,13 +10,21 @@ import (
 )
 
 type configFile struct {
-	NoteTemplate string                 `yaml:"noteTemplate"`
-	Vars         map[string]interface{} `yaml:"vars"`
+	ThemeDirectory *string                `yaml:"themeDirectory"`
+	NoteTemplate   *string                `yaml:"noteTemplate"`
+	Vars           map[string]interface{} `yaml:"vars"`
+	Copy           []string               `yaml:"copy"`
 }
 
 type Config struct {
 	NoteTemplate string
 	Vars         map[string]interface{}
+	Copy         []copyFile
+}
+
+type copyFile struct {
+	Base     string
+	Relative string
 }
 
 func ComputePath(v, c string) string {
@@ -28,6 +36,9 @@ func ComputePath(v, c string) string {
 }
 
 func Load(p string) (*Config, error) {
+	oblishConfig := &Config{
+		Vars: map[string]interface{}{},
+	}
 	oblishConfigFile := &configFile{}
 
 	// Get absolute path of config file
@@ -53,20 +64,47 @@ func Load(p string) (*Config, error) {
 		return nil, err
 	}
 
-	noteTemplateFile, err := computeRelativeToConfigFile(absPath, oblishConfigFile.NoteTemplate)
-	if err != nil {
-		return nil, err
+	if oblishConfigFile.ThemeDirectory != nil {
+		themeDirPath, err := computeRelativeToConfigFile(absPath, *oblishConfigFile.ThemeDirectory)
+		if err != nil {
+			return nil, err
+		}
+		themeConfigFile := strings.TrimSuffix(themeDirPath, "/") + "/config.yml"
+		// Check if theme directory is the same as the current directory to prevent infinite recursion
+		if absPath != themeConfigFile {
+			oblishConfig, err = Load(themeConfigFile)
+			if err != nil {
+				return nil, err
+			}
+		}
 	}
 
-	noteTemplateString, err := ioutil.ReadFile(noteTemplateFile)
-	if err != nil {
-		return nil, err
+	if oblishConfigFile.NoteTemplate != nil {
+		noteTemplateFile, err := computeRelativeToConfigFile(absPath, *oblishConfigFile.NoteTemplate)
+		if err != nil {
+			return nil, err
+		}
+
+		noteTemplateString, err := ioutil.ReadFile(noteTemplateFile)
+		if err != nil {
+			return nil, err
+		}
+
+		oblishConfig.NoteTemplate = string(noteTemplateString)
 	}
 
-	return &Config{
-		NoteTemplate: string(noteTemplateString),
-		Vars:         oblishConfigFile.Vars,
-	}, nil
+	for k, v := range oblishConfigFile.Vars {
+		oblishConfig.Vars[k] = v
+	}
+
+	for _, path := range oblishConfigFile.Copy {
+		oblishConfig.Copy = append(oblishConfig.Copy, copyFile{
+			Base:     filepath.Dir(absPath),
+			Relative: path,
+		})
+	}
+
+	return oblishConfig, nil
 }
 
 func computeRelativeToConfigFile(c, r string) (string, error) {
