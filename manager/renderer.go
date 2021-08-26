@@ -77,7 +77,7 @@ func (fm *noteManager) renderNote(dest, tpl string, note *Note, extraVars map[st
 
 	file, err := os.OpenFile(
 		dest,
-		os.O_RDWR|os.O_CREATE,
+		os.O_RDWR|os.O_CREATE|os.O_TRUNC,
 		0644,
 	)
 	if err != nil {
