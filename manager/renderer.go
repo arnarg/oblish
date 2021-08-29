@@ -8,6 +8,16 @@ import (
 	"github.com/arnarg/oblish/util"
 )
 
+type TagInventory struct {
+	Tags map[string][]TagLink
+	Vars map[string]interface{}
+}
+
+type TagLink struct {
+	Title string
+	Path  string
+}
+
 type NoteInventory struct {
 	Title       string
 	Placeholder bool
@@ -21,24 +31,73 @@ type Backlink struct {
 	Path  string
 }
 
-func (fm *noteManager) RenderNotes(dest, tpl string, extraVars map[string]interface{}) error {
+func (nm *noteManager) RenderTags(dest, tpl string, extraVars map[string]interface{}) error {
 	if !strings.HasSuffix(dest, "/") {
 		dest = dest + "/"
 	}
-	if fm.index != nil {
-		err := fm.renderNote(dest+"index.html", tpl, fm.index, extraVars)
+
+	err := util.CreateDirIfNotExist(dest + "tags/")
+	if err != nil {
+		return err
+	}
+	dest = dest + "tags/index.html"
+
+	inv := TagInventory{
+		Tags: map[string][]TagLink{},
+		Vars: extraVars,
+	}
+
+	for tag, pages := range nm.tags {
+		inv.Tags[tag] = []TagLink{}
+		for _, page := range pages {
+			p := TagLink{
+				Title: page.Title,
+				Path:  page.GetSlug(),
+			}
+			inv.Tags[tag] = append(inv.Tags[tag], p)
+		}
+	}
+
+	tmpl, err := template.New("Tags").Parse(tpl)
+	if err != nil {
+		return err
+	}
+
+	file, err := os.OpenFile(
+		dest,
+		os.O_RDWR|os.O_CREATE|os.O_TRUNC,
+		0644,
+	)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	err = tmpl.Execute(file, inv)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (nm *noteManager) RenderNotes(dest, tpl string, extraVars map[string]interface{}) error {
+	if !strings.HasSuffix(dest, "/") {
+		dest = dest + "/"
+	}
+	if nm.index != nil {
+		err := nm.renderNote(dest+"index.html", tpl, nm.index, extraVars)
 		if err != nil {
 			return err
 		}
 	}
-	for _, note := range fm.notes {
+	for _, note := range nm.notes {
 		slug := note.GetSlug()
 
 		err := util.CreateDirIfNotExist(dest + slug)
 		if err != nil {
 			return err
 		}
-		err = fm.renderNote(dest+slug+"/index.html", tpl, note, extraVars)
+		err = nm.renderNote(dest+slug+"/index.html", tpl, note, extraVars)
 		if err != nil {
 			return err
 		}
@@ -46,7 +105,7 @@ func (fm *noteManager) RenderNotes(dest, tpl string, extraVars map[string]interf
 	return nil
 }
 
-func (fm *noteManager) renderNote(dest, tpl string, note *Note, extraVars map[string]interface{}) error {
+func (nm *noteManager) renderNote(dest, tpl string, note *Note, extraVars map[string]interface{}) error {
 
 	// Get backlinks to note
 	bls := []Backlink{}
@@ -57,7 +116,7 @@ func (fm *noteManager) renderNote(dest, tpl string, note *Note, extraVars map[st
 		})
 	}
 
-	body, err := note.Render(fm.markdown.Renderer())
+	body, err := note.Render(nm.markdown.Renderer())
 	if err != nil {
 		return err
 	}

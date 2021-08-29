@@ -12,12 +12,14 @@ import (
 type configFile struct {
 	ThemeDirectory *string                `yaml:"themeDirectory"`
 	NoteTemplate   *string                `yaml:"noteTemplate"`
+	TagsTemplate   *string                `yaml:"tagsTemplate"`
 	Vars           map[string]interface{} `yaml:"vars"`
 	Copy           []string               `yaml:"copy"`
 }
 
 type Config struct {
 	NoteTemplate string
+	TagsTemplate string
 	Vars         map[string]interface{}
 	Copy         []copyFile
 }
@@ -91,6 +93,20 @@ func Load(p string) (*Config, error) {
 		}
 
 		oblishConfig.NoteTemplate = string(noteTemplateString)
+	}
+
+	if oblishConfigFile.TagsTemplate != nil {
+		tagsTemplateFile, err := computeRelativeToConfigFile(absPath, *oblishConfigFile.TagsTemplate)
+		if err != nil {
+			return nil, err
+		}
+
+		tagsTemplateString, err := ioutil.ReadFile(tagsTemplateFile)
+		if err != nil {
+			return nil, err
+		}
+
+		oblishConfig.TagsTemplate = string(tagsTemplateString)
 	}
 
 	for k, v := range oblishConfigFile.Vars {

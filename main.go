@@ -88,6 +88,13 @@ func run(c *cli.Context) error {
 		return err
 	}
 
+	if conf.TagsTemplate != "" {
+		err = noteManager.RenderTags(destinationPath, conf.TagsTemplate, conf.Vars)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
