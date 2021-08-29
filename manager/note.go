@@ -54,3 +54,7 @@ func (n *Note) Render(r renderer.Renderer) (string, error) {
 
 	return buf.String(), nil
 }
+
+func (n *Note) IsPlaceholder() bool {
+	return n.Node == nil
+}

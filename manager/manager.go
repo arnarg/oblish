@@ -102,6 +102,15 @@ func (fm *noteManager) ComputeLinks() error {
 					// Correct wikilink's destination if the
 					// other node has a custom slug
 					link.Destination = []byte(otherNote.GetSlug())
+
+					// Set a special class to backlinks that don't go
+					// anywhere (except the placeholder page)
+					if otherNote.IsPlaceholder() {
+						// Currently wikilink extensions doesn't render the attributes
+						// https://github.com/13rac1/goldmark-wikilink/issues/3
+						// TODO review
+						link.SetAttributeString("class", "placeholder")
+					}
 					return ast.WalkSkipChildren, nil
 				}
 

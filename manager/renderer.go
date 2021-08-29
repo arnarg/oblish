@@ -65,7 +65,7 @@ func (fm *noteManager) renderNote(dest, tpl string, note *Note, extraVars map[st
 	// Template note
 	inv := NoteInventory{
 		Title:       note.Title,
-		Placeholder: note.Node == nil,
+		Placeholder: note.IsPlaceholder(),
 		Body:        body,
 		Backlinks:   bls,
 		Vars:        extraVars,
